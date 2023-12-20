@@ -635,6 +635,7 @@ dtb-$(CONFIG_MACH_SUN50I_H6) += \
 	sun50i-h6-pine-h64.dtb \
 	sun50i-h6-tanix-tx6.dtb
 dtb-$(CONFIG_MACH_SUN50I_H616) += \
+	sun50i-h616-walnutpi-1b.dtb \
 	sun50i-h616-orangepi-zero2.dtb
 dtb-$(CONFIG_MACH_SUN50I) += \
 	sun50i-a64-amarula-relic.dtb \
