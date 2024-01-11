@@ -201,7 +201,6 @@ config TARGET_IMX8MP_BEACON
 
 config TARGET_IMX8MP_DEBIX_MODEL_A
 	bool "Polyhex i.MX8M Plus Debix Model A SBC"
-	select BINMAN
 	select IMX8MP
 	select IMX8M_LPDDR4
 	select SUPPORT_SPL
