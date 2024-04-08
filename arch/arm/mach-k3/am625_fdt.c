@@ -38,27 +38,40 @@ static void fdt_fixup_pru_node_am625(void *blob, int has_pru)
 		fdt_del_node_path(blob, "/bus@f0000/pruss@30040000");
 }
 
-static int k3_get_core_nr(void)
+static int fdt_fixup_trips_node(void *blob, int zoneoffset, int maxc)
 {
-	u32 full_devid = readl(CTRLMMR_WKUP_JTAG_DEVICE_ID);
+	int node, trip;
 
-	return (full_devid & JTAG_DEV_CORE_NR_MASK) >> JTAG_DEV_CORE_NR_SHIFT;
+	node = fdt_subnode_offset(blob, zoneoffset, "trips");
+	if (node < 0)
+		return -1;
+
+	fdt_for_each_subnode(trip, blob, node) {
+		const char *type = fdt_getprop(blob, trip, "type", NULL);
+
+		if (!type || (strncmp(type, "critical", 8) != 0))
+			continue;
+
+		if (fdt_setprop_u32(blob, trip, "temperature", 1000 * maxc) < 0)
+			return -1;
+	}
+
+	return 0;
 }
 
-static int k3_has_pru(void)
+static void fdt_fixup_thermal_zone_nodes_am625(void *blob, int maxc)
 {
-	u32 full_devid = readl(CTRLMMR_WKUP_JTAG_DEVICE_ID);
-	u32 feature_mask = (full_devid & JTAG_DEV_FEATURES_MASK) >>
-			   JTAG_DEV_FEATURES_SHIFT;
+	int node, zone;
 
-	return !(feature_mask & JTAG_DEV_FEATURE_NO_PRU);
-}
+	node = fdt_path_offset(blob, "/thermal-zones");
+	if (node < 0)
+		return;
 
-static int k3_has_gpu(void)
-{
-	u32 full_devid = readl(CTRLMMR_WKUP_JTAG_DEVICE_ID);
-
-	return (full_devid & JTAG_DEV_GPU_MASK) >> JTAG_DEV_GPU_SHIFT;
+	fdt_for_each_subnode(zone, blob, node) {
+		if (fdt_fixup_trips_node(blob, zone, maxc) < 0)
+			printf("Failed to set temperature in %s critical trips\n",
+			       fdt_get_name(blob, zone, NULL));
+	}
 }
 
 int ft_system_setup(void *blob, struct bd_info *bd)
@@ -66,6 +79,9 @@ int ft_system_setup(void *blob, struct bd_info *bd)
 	fdt_fixup_cores_nodes_am625(blob, k3_get_core_nr());
 	fdt_fixup_gpu_nodes_am625(blob, k3_has_gpu());
 	fdt_fixup_pru_node_am625(blob, k3_has_pru());
+	fdt_fixup_thermal_zone_nodes_am625(blob, k3_get_max_temp());
+	fdt_fixup_reserved(blob, "tfa", CONFIG_K3_ATF_LOAD_ADDR, 0x80000);
+	fdt_fixup_reserved(blob, "optee", CONFIG_K3_OPTEE_LOAD_ADDR, 0x1800000);
 
 	return 0;
 }

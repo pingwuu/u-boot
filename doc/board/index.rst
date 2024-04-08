@@ -42,15 +42,18 @@ Board-specific doc
    renesas/index
    rockchip/index
    samsung/index
+   sielaff/index
    siemens/index
    sifive/index
    sipeed/index
    socionext/index
+   sophgo/index
    st/index
    starfive/index
    ste/index
    tbs/index
    thead/index
+   theobroma-systems/index
    ti/index
    toradex/index
    variscite/index

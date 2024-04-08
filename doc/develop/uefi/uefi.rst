@@ -193,7 +193,7 @@ on the sandbox
 .. code-block:: bash
 
     cd <U-Boot source directory>
-    pytest.py test/py/tests/test_efi_secboot/test_signed.py --bd sandbox
+    pytest test/py/tests/test_efi_secboot/test_signed.py --bd sandbox
 
 UEFI binaries may be signed by Microsoft using the following certificates:
 
@@ -830,7 +830,7 @@ driver on a device the ConnectController service is called. In this context
 controller refers to the device for which the driver is installed.
 
 The relevant drivers are identified using the EFI_DRIVER_BINDING_PROTOCOL. This
-protocol has has three functions:
+protocol has three functions:
 
 * supported - determines if the driver is compatible with the device
 * start - installs the driver by opening the relevant protocol with

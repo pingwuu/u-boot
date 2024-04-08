@@ -39,7 +39,6 @@ int bootdev_add_bootflow(struct bootflow *bflow)
 	struct bootflow *new;
 	int ret;
 
-	assert(bflow->dev);
 	ret = bootstd_get_priv(&std);
 	if (ret)
 		return ret;
@@ -173,8 +172,10 @@ int bootdev_find_in_blk(struct udevice *dev, struct udevice *blk,
 	 */
 	iter->max_part = MAX_PART_PER_BOOTDEV;
 
-	/* If this is the whole disk, check if we have bootable partitions */
-	if (!iter->part) {
+	if (iter->flags & BOOTFLOWIF_SINGLE_PARTITION) {
+		/* a particular partition was specified, scan it without checking */
+	} else if (!iter->part) {
+		/* This is the whole disk, check if we have bootable partitions */
 		iter->first_bootable = part_get_bootable(desc);
 		log_debug("checking bootable=%d\n", iter->first_bootable);
 	} else if (allow_any_part) {
@@ -632,7 +633,7 @@ int bootdev_next_label(struct bootflow_iter *iter, struct udevice **devp,
 
 int bootdev_next_prio(struct bootflow_iter *iter, struct udevice **devp)
 {
-	struct udevice *dev = *devp;
+	struct udevice *dev = *devp, *last_dev = NULL;
 	bool found;
 	int ret;
 
@@ -682,9 +683,19 @@ int bootdev_next_prio(struct bootflow_iter *iter, struct udevice **devp)
 			}
 		} else {
 			ret = device_probe(dev);
+			if (!ret)
+				last_dev = dev;
 			if (ret) {
-				log_debug("Device '%s' failed to probe\n",
+				log_warning("Device '%s' failed to probe\n",
 					  dev->name);
+				if (last_dev == dev) {
+					/*
+					 * We have already tried this device
+					 * and it failed to probe. Give up.
+					 */
+					return log_msg_ret("probe", ret);
+				}
+				last_dev = dev;
 				dev = NULL;
 			}
 		}
@@ -701,7 +712,36 @@ int bootdev_setup_iter(struct bootflow_iter *iter, const char *label,
 	struct udevice *bootstd, *dev = NULL;
 	bool show = iter->flags & BOOTFLOWIF_SHOW;
 	int method_flags;
+	char buf[32];
 	int ret;
+
+	if (label) {
+		const char *end = strchr(label, ':');
+
+		if (end) {
+			size_t len = (size_t)(end - label);
+			const char *part = end + 1;
+
+			if (len + 1 > sizeof(buf)) {
+				log_err("label \"%s\" is way too long\n", label);
+				return -EINVAL;
+			}
+
+			memcpy(buf, label, len);
+			buf[len] = '\0';
+			label = buf;
+
+			unsigned long tmp;
+
+			if (strict_strtoul(part, 0, &tmp)) {
+				log_err("Invalid partition number: %s\n", part);
+				return -EINVAL;
+			}
+
+			iter->flags |= BOOTFLOWIF_SINGLE_PARTITION;
+			iter->part = tmp;
+		}
+	}
 
 	ret = uclass_first_device_err(UCLASS_BOOTSTD, &bootstd);
 	if (ret) {

@@ -7,6 +7,8 @@ PHYTEC
    :maxdepth: 2
 
    imx8mm-phygate-tauri-l
+   imx93-phyboard-segin
    phycore-am62x
+   phycore-am64x
    phycore-imx8mm
    phycore-imx8mp

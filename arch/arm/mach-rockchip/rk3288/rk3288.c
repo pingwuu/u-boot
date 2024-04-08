@@ -11,7 +11,6 @@
 #include <malloc.h>
 #include <asm/armv7.h>
 #include <asm/global_data.h>
-#include <asm/io.h>
 #include <asm/arch-rockchip/bootrom.h>
 #include <asm/arch-rockchip/clock.h>
 #include <asm/arch-rockchip/cpu_rk3288.h>
@@ -184,8 +183,6 @@ static int do_clock(struct cmd_tbl *cmdtp, int flag, int argc,
 
 		rate = clk_get_rate(&clk);
 		printf("%s: %lu\n", clks[i].name, rate);
-
-		clk_free(&clk);
 	}
 
 	return 0;

@@ -13,12 +13,14 @@
 #include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/imx93_pins.h>
+#include <asm/arch/mu.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/mach-imx/boot_mode.h>
 #include <asm/mach-imx/mxc_i2c.h>
 #include <asm/arch-mx7ulp/gpio.h>
 #include <asm/sections.h>
+#include <asm/mach-imx/ele_api.h>
 #include <asm/mach-imx/syscounter.h>
 #include <dm/uclass.h>
 #include <dm/device.h>
@@ -46,8 +48,13 @@ int spl_board_boot_device(enum boot_device boot_dev_spl)
 void spl_board_init(void)
 {
 	struct var_eeprom *ep = VAR_EEPROM_DATA;
+	int ret;
 
 	puts("Normal Boot\n");
+
+	ret = ele_start_rng();
+	if (ret)
+		printf("Fail to start RNG: %d\n", ret);
 
 	/* Copy EEPROM contents to DRAM */
 	memcpy(ep, &eeprom, sizeof(*ep));
@@ -114,9 +121,9 @@ void board_init_f(ulong dummy)
 
 	preloader_console_init();
 
-	ret = arch_cpu_init();
+	ret = imx9_probe_mu();
 	if (ret) {
-		printf("Fail to init Sentinel API\n");
+		printf("Fail to init ELE API\n");
 	} else {
 		printf("SOC: 0x%x\n", gd->arch.soc_rev);
 		printf("LC: 0x%x\n", gd->arch.lifecycle);

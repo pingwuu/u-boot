@@ -6,6 +6,7 @@ config SYS_ARCH
 
 config ARM64
 	bool
+	select 64BIT
 	select PHYS_64BIT
 	select SYS_CACHE_SHIFT_6
 	imply SPL_SEPARATE_BSS
@@ -28,6 +29,7 @@ config COUNTER_FREQUENCY
 			ROCKCHIP_RK3288 || ROCKCHIP_RK322X || ROCKCHIP_RK3036
 	default 25000000 if ARCH_LX2160A || ARCH_LX2162A || ARCH_LS1088A
 	default 100000000 if ARCH_ZYNQMP
+	default 200000000 if ARCH_SOCFPGA && ARM64 && TARGET_SOCFPGA_AGILEX5
 	default 0
 	help
 	  For platforms with ARMv8-A and ARMv7-A which features a system
@@ -121,6 +123,15 @@ config GIC_V3_ITS
 	  LPI configuration table can be used by u-boot or Linux.
 	  ARM GICV3 has limitation, once the LPI table is enabled, LPI
 	  configuration table can not be re-programmed, unless GICV3 reset.
+
+config GICV3_SUPPORT_GIC600
+	bool "ARM GICV3 GIC600 SUPPORT"
+	help
+	  ARM GIC-600 IP complies with ARM GICv3 architecture, but among others,
+	  implements a power control register in the Redistributor frame.This
+	  register must be programmed to mark the frame as powered on, before
+	  accessing other registers in the frame. Rest of initialization sequence
+	  remains the same.
 
 config STATIC_RELA
 	bool
@@ -614,6 +625,7 @@ config ARCH_MVEBU
 	select DM_SPI
 	select DM_SPI_FLASH
 	select GPIO_EXTRA_HEADER
+	select MTD
 	select SPL_DM_SPI if SPL
 	select SPL_DM_SPI_FLASH if SPL
 	select SPL_TIMER if SPL
@@ -629,19 +641,6 @@ config ARCH_ORION5X
 	select GPIO_EXTRA_HEADER
 	select SPL_SEPARATE_BSS if SPL
 	select TIMER
-
-config TARGET_STV0991
-	bool "Support stv0991"
-	select CPU_V7A
-	select DM
-	select DM_SERIAL
-	select DM_SPI
-	select DM_SPI_FLASH
-	select GPIO_EXTRA_HEADER
-	select PL01X_SERIAL
-	select SPI
-	select SPI_FLASH
-	imply CMD_DM
 
 config ARCH_BCM283X
 	bool "Broadcom BCM283X family"
@@ -676,7 +675,7 @@ config ARCH_BCMBCA
 config TARGET_VEXPRESS_CA9X4
 	bool "Support vexpress_ca9x4"
 	select CPU_V7A
-	select PL011_SERIAL
+	select PL01X_SERIAL
 
 config TARGET_BCMNS
 	bool "Support Broadcom Northstar"
@@ -697,15 +696,6 @@ config TARGET_BCMNS
 	  ARMv7 Cortex-A9 SoC family including BCM4708, BCM47094,
 	  BCM5301x etc.
 
-config TARGET_BCMNS2
-	bool "Support Broadcom Northstar2"
-	select ARM64
-	select GPIO_EXTRA_HEADER
-	help
-	  Support for Broadcom Northstar 2 SoCs.  NS2 is a quad-core 64-bit
-	  ARMv8 Cortex-A57 processors targeting a broad range of networking
-	  applications.
-
 config TARGET_BCMNS3
 	bool "Support Broadcom NS3"
 	select ARM64
@@ -724,6 +714,7 @@ config ARCH_EXYNOS
 	select DM_SERIAL
 	select DM_SPI
 	select DM_SPI_FLASH
+	select MTD
 	select SPI
 	select GPIO_EXTRA_HEADER
 	imply SYS_THUMB_BUILD
@@ -782,15 +773,21 @@ config ARCH_IPQ40XX
 
 config ARCH_KEYSTONE
 	bool "TI Keystone"
+	select CMD_DDR3
 	select CMD_POWEROFF
 	select CPU_V7A
 	select DDR_SPD
+	select SPL_BOARD_INIT if SPL
 	select SUPPORT_SPL
 	select SYS_ARCH_TIMER
 	select SYS_THUMB_BUILD
 	imply CMD_MTDPARTS
+	imply CMD_NFS
 	imply CMD_SAVES
+	imply DM_I2C
 	imply FIT
+	imply SOC_TI
+	imply TI_KEYSTONE_SERDES
 
 config ARCH_K3
 	bool "Texas Instruments' K3 Architecture"
@@ -1008,6 +1005,7 @@ config ARCH_APPLE
 	select VIDEO
 	select IOMMU
 	select LINUX_KERNEL_IMAGE_HEADER
+	select MTD
 	select OF_BOARD_SETUP
 	select OF_CONTROL
 	select PCI
@@ -1061,11 +1059,12 @@ config ARCH_QEMU
 	imply USB_KEYBOARD
 	imply CMD_USB
 
-config ARCH_RMOBILE
+config ARCH_RENESAS
 	bool "Renesas ARM SoCs"
 	select DM
 	select DM_SERIAL
 	select GPIO_EXTRA_HEADER
+	select LTO
 	imply BOARD_EARLY_INIT_F
 	imply CMD_DM
 	imply FAT_WRITE
@@ -1079,12 +1078,17 @@ config ARCH_SNAPDRAGON
 	select DM_GPIO
 	select DM_SERIAL
 	select DM_RESET
+	select POWER_DOMAIN
 	select GPIO_EXTRA_HEADER
 	select MSM_SMEM
 	select OF_CONTROL
 	select OF_SEPARATE
 	select SMEM
 	select SPMI
+	select BOARD_LATE_INIT
+	select OF_BOARD
+	select SAVE_PREV_BL_FDT_ADDR
+	select LINUX_KERNEL_IMAGE_HEADER
 	imply CMD_DM
 
 config ARCH_SOCFPGA
@@ -1105,6 +1109,8 @@ config ARCH_SOCFPGA
 	select SPL_LIBGENERIC_SUPPORT
 	select SPL_OF_CONTROL
 	select SPL_SEPARATE_BSS if TARGET_SOCFPGA_SOC64
+	select SPL_DRIVERS_MISC if TARGET_SOCFPGA_SOC64
+	select SPL_SOCFPGA_DT_REG if TARGET_SOCFPGA_SOC64
 	select SPL_SERIAL
 	select SPL_SYSRESET
 	select SPL_WATCHDOG
@@ -1113,13 +1119,15 @@ config ARCH_SOCFPGA
 	select SYS_THUMB_BUILD if TARGET_SOCFPGA_GEN5 || TARGET_SOCFPGA_ARRIA10
 	select SYSRESET
 	select SYSRESET_SOCFPGA if TARGET_SOCFPGA_GEN5 || TARGET_SOCFPGA_ARRIA10
-	select SYSRESET_SOCFPGA_SOC64 if TARGET_SOCFPGA_SOC64
+	select SYSRESET_SOCFPGA_SOC64 if !TARGET_SOCFPGA_AGILEX5 && \
+	  TARGET_SOCFPGA_SOC64
 	imply CMD_DM
 	imply CMD_MTDPARTS
 	imply CRC32_VERIFY
 	imply DM_SPI
 	imply DM_SPI_FLASH
 	imply FAT_WRITE
+	imply MTD
 	imply SPL
 	imply SPL_DM
 	imply SPL_DM_SPI
@@ -1143,7 +1151,7 @@ config ARCH_SUNXI
 	select DM_GPIO
 	select DM_I2C if I2C
 	select DM_SPI if SPI
-	select DM_SPI_FLASH if SPI
+	select DM_SPI_FLASH if SPI && MTD
 	select DM_KEYBOARD
 	select DM_MMC if MMC
 	select DM_SERIAL
@@ -1155,14 +1163,14 @@ config ARCH_SUNXI
 	select SPL_SEPARATE_BSS if SPL
 	select SPL_STACK_R if SPL
 	select SPL_SYS_MALLOC_SIMPLE if SPL
-	select SPL_SYS_THUMB_BUILD if !ARM64
+	select SPL_SYS_THUMB_BUILD if SPL && !ARM64
 	select SUNXI_GPIO
 	select SYS_NS16550
 	select SYS_THUMB_BUILD if !ARM64
 	select USB if DISTRO_DEFAULTS
 	select USB_KEYBOARD if DISTRO_DEFAULTS && USB_HOST
 	select USB_STORAGE if DISTRO_DEFAULTS && USB_HOST
-	select SPL_USE_TINY_PRINTF
+	select SPL_USE_TINY_PRINTF if SPL
 	select USE_PREBOOT
 	select SYS_RELOC_GD_ENV_ADDR
 	imply BOARD_LATE_INIT
@@ -1261,6 +1269,7 @@ config ARCH_ZYNQ
 	select DM_SPI
 	select DM_SPI_FLASH
 	select OF_CONTROL
+	select MTD
 	select SPI
 	select SPL_BOARD_INIT if SPL
 	select SPL_CLK if SPL
@@ -1299,6 +1308,7 @@ config ARCH_ZYNQMP
 	imply DM_MAILBOX
 	select DM_MMC if MMC
 	select DM_SERIAL
+	select MTD
 	select DM_SPI if SPI
 	select DM_SPI_FLASH if DM_SPI
 	imply FIRMWARE
@@ -1845,6 +1855,7 @@ config TARGET_SL28
 	select DM_GPIO
 	select DM_I2C
 	select DM_MMC
+	select MTD
 	select DM_SPI_FLASH
 	select DM_MDIO
 	select PCI
@@ -1986,8 +1997,10 @@ config ARCH_ROCKCHIP
 	select DM_SERIAL
 	select DM_SPI
 	select DM_SPI_FLASH
+	select DM_USB_GADGET if USB_DWC3_GADGET
 	select ENABLE_ARM_SOC_BOOT0_HOOK
 	select OF_CONTROL
+	select MTD
 	select SPI
 	select SPL_DM if SPL
 	select SPL_DM_SPI if SPL
@@ -2252,7 +2265,7 @@ source "arch/arm/mach-orion5x/Kconfig"
 
 source "arch/arm/mach-owl/Kconfig"
 
-source "arch/arm/mach-rmobile/Kconfig"
+source "arch/arm/mach-renesas/Kconfig"
 
 source "arch/arm/mach-meson/Kconfig"
 
@@ -2346,7 +2359,6 @@ source "board/samsung/common/Kconfig"
 source "board/siemens/common/Kconfig"
 source "board/seeed/npi_imx6ull/Kconfig"
 source "board/socionext/developerbox/Kconfig"
-source "board/st/stv0991/Kconfig"
 source "board/tcl/sl50/Kconfig"
 source "board/traverse/ten64/Kconfig"
 source "board/variscite/dart_6ul/Kconfig"

@@ -42,6 +42,7 @@
 #include <fdt_support.h>
 #include <bootcount.h>
 #include <wdt.h>
+#include <video.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 DECLARE_BINMAN_MAGIC_SYM;
@@ -150,6 +151,24 @@ void spl_fixup_fdt(void *fdt_blob)
 		return;
 	}
 #endif
+}
+
+int spl_reserve_video_from_ram_top(void)
+{
+	if (CONFIG_IS_ENABLED(VIDEO)) {
+		ulong addr;
+		int ret;
+
+		addr = gd->ram_top;
+		ret = video_reserve(&addr);
+		if (ret)
+			return ret;
+		debug("Reserving %luk for video at: %08lx\n",
+		      ((unsigned long)gd->relocaddr - addr) >> 10, addr);
+		gd->relocaddr = addr;
+	}
+
+	return 0;
 }
 
 ulong spl_get_image_pos(void)
@@ -889,6 +908,9 @@ ulong spl_relocate_stack_gd(void)
 	memcpy(new_gd, (void *)gd, sizeof(gd_t));
 #if CONFIG_IS_ENABLED(DM)
 	dm_fixup_for_gd_move(new_gd);
+#endif
+#if CONFIG_IS_ENABLED(LOG)
+	log_fixup_for_gd_move(new_gd);
 #endif
 #if !defined(CONFIG_ARM) && !defined(CONFIG_RISCV)
 	gd = new_gd;

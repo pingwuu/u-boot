@@ -69,20 +69,6 @@ static void ctrl_mmr_unlock(void)
 	mmr_unlock(PADCFG_MMR1_BASE, 1);
 }
 
-#if (IS_ENABLED(CONFIG_CPU_V7R))
-static void setup_qos(void)
-{
-	u32 i;
-
-	for (i = 0; i < am62a_qos_count; i++)
-		writel(am62a_qos_data[i].val, (uintptr_t)am62a_qos_data[i].reg);
-}
-#else
-static void setup_qos(void)
-{
-}
-#endif
-
 void board_init_f(ulong dummy)
 {
 	struct udevice *dev;
@@ -142,6 +128,9 @@ void board_init_f(ulong dummy)
 		panic("ROM has not loaded TIFS firmware\n");
 
 	k3_sysfw_loader(true, NULL, NULL);
+
+	/* Disable ROM configured firewalls right after loading sysfw */
+	remove_fwl_configs(cbass_main_fwls, ARRAY_SIZE(cbass_main_fwls));
 #endif
 
 #if defined(CONFIG_CPU_V7R)
@@ -169,9 +158,6 @@ void board_init_f(ulong dummy)
 
 	/* Output System Firmware version info */
 	k3_sysfw_print_ver();
-
-       /* Disable ROM configured firewalls right after loading sysfw */
-       remove_fwl_configs(cbass_main_fwls, ARRAY_SIZE(cbass_main_fwls));
 
 #if defined(CONFIG_K3_AM62A_DDRSS)
 	ret = uclass_get_device(UCLASS_RAM, 0, &dev);

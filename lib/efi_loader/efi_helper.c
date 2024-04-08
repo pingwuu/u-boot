@@ -380,12 +380,12 @@ done:
 }
 
 /**
- * get_config_table() - get configuration table
+ * efi_get_configuration_table() - get configuration table
  *
  * @guid:	GUID of the configuration table
  * Return:	pointer to configuration table or NULL
  */
-static void *get_config_table(const efi_guid_t *guid)
+void *efi_get_configuration_table(const efi_guid_t *guid)
 {
 	size_t i;
 
@@ -430,7 +430,7 @@ efi_status_t efi_install_fdt(void *fdt)
 		uintptr_t fdt_addr;
 
 		/* Look for device tree that is already installed */
-		if (get_config_table(&efi_guid_fdt))
+		if (efi_get_configuration_table(&efi_guid_fdt))
 			return EFI_SUCCESS;
 		/* Check if there is a hardware device tree */
 		fdt_opt = env_get("fdt_addr");
@@ -456,11 +456,11 @@ efi_status_t efi_install_fdt(void *fdt)
 		return EFI_LOAD_ERROR;
 	}
 
-	/* Create memory reservations as indicated by the device tree */
-	efi_carve_out_dt_rsv(fdt);
-
-	if (CONFIG_IS_ENABLED(GENERATE_ACPI_TABLE))
+	if (CONFIG_IS_ENABLED(GENERATE_ACPI_TABLE)) {
+		/* Create memory reservations as indicated by the device tree */
+		efi_carve_out_dt_rsv(fdt);
 		return EFI_SUCCESS;
+	}
 
 	/* Prepare device tree for payload */
 	ret = copy_fdt(&fdt);
@@ -473,6 +473,9 @@ efi_status_t efi_install_fdt(void *fdt)
 		log_err("ERROR: failed to process device tree\n");
 		return EFI_LOAD_ERROR;
 	}
+
+	/* Create memory reservations as indicated by the device tree */
+	efi_carve_out_dt_rsv(fdt);
 
 	efi_try_purge_kaslr_seed(fdt);
 

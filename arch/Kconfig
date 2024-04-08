@@ -20,6 +20,12 @@ config SYS_CACHE_SHIFT_6
 config SYS_CACHE_SHIFT_7
 	bool
 
+config 32BIT
+	bool
+
+config 64BIT
+	bool
+
 config SYS_CACHELINE_SIZE
 	int
 	default 128 if SYS_CACHE_SHIFT_7
@@ -149,6 +155,7 @@ config SANDBOX
 	select GZIP_COMPRESSED
 	select IO_TRACE
 	select LZO
+	select MTD
 	select OF_BOARD_SETUP
 	select PCI_ENDPOINT
 	select SPI
@@ -254,6 +261,7 @@ config X86
 	imply DM_RTC
 	imply SCSI
 	imply DM_SERIAL
+	imply MTD
 	imply DM_SPI
 	imply DM_SPI_FLASH
 	imply DM_USB
@@ -359,7 +367,16 @@ config SYS_BOARD
 	  leave this option empty.
 
 config SYS_CONFIG_NAME
-	string
+	string "Board header file" if ARCH_MESON || ARCH_VERSAL || \
+		ARCH_VERSAL_NET || ARCH_ZYNQ || ARCH_ZYNQMP || \
+		ARCH_ZYNQMP_R5 || MICROBLAZE || NIOS2
+	default "meson64" if ARCH_MESON
+	default "microblaze-generic" if MICROBLAZE
+	default "xilinx_versal" if ARCH_VERSAL
+	default "xilinx_versal_net" if ARCH_VERSAL_NET
+	default "xilinx_zynqmp" if ARCH_ZYNQMP
+	default "xilinx_zynqmp_r5" if ARCH_ZYNQMP_R5
+	default "zynq-common" if ARCH_ZYNQ
 	help
 	  This option should contain the base name of board header file.
 	  The header file include/configs/<CONFIG_SYS_CONFIG_NAME>.h
